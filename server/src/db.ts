@@ -1,27 +1,10 @@
-import Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data.sqlite')
-
-export const db = new Database(DB_PATH)
-db.pragma('journal_mode = WAL')
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id            TEXT PRIMARY KEY,
-    email         TEXT UNIQUE NOT NULL,
-    name          TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
-    verified      INTEGER NOT NULL DEFAULT 0,
-    code          TEXT,
-    code_expires  INTEGER,
-    code_attempts INTEGER NOT NULL DEFAULT 0,
-    created_at    INTEGER NOT NULL
-  );
-`)
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data.json')
 
 export interface UserRow {
   id: string
@@ -35,49 +18,78 @@ export interface UserRow {
   created_at: number
 }
 
-export function findUserByEmail(email: string): UserRow | undefined {
-  return db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase()) as
-    | UserRow
-    | undefined
+interface DbShape {
+  users: UserRow[]
 }
 
-export function createUser(data: {
+function load(): DbShape {
+  try {
+    const raw = fs.readFileSync(DB_PATH, 'utf8')
+    const parsed = JSON.parse(raw) as Partial<DbShape>
+    return { users: Array.isArray(parsed.users) ? parsed.users : [] }
+  } catch {
+    return { users: [] }
+  }
+}
+
+const data: DbShape = load()
+
+function persist() {
+  const tmp = `${DB_PATH}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2))
+  fs.renameSync(tmp, DB_PATH)
+}
+
+export function findUserByEmail(email: string): UserRow | undefined {
+  const target = email.toLowerCase()
+  return data.users.find((u) => u.email === target)
+}
+
+export function createUser(input: {
   email: string
   name: string
   passwordHash: string
   code: string
   codeExpires: number
 }): UserRow {
-  const id = randomUUID()
-  db.prepare(
-    `INSERT INTO users (id, email, name, password_hash, verified, code, code_expires, code_attempts, created_at)
-     VALUES (?, ?, ?, ?, 0, ?, ?, 0, ?)`,
-  ).run(
-    id,
-    data.email.toLowerCase(),
-    data.name,
-    data.passwordHash,
-    data.code,
-    data.codeExpires,
-    Date.now(),
-  )
-  return findUserByEmail(data.email)!
+  const user: UserRow = {
+    id: randomUUID(),
+    email: input.email.toLowerCase(),
+    name: input.name,
+    password_hash: input.passwordHash,
+    verified: 0,
+    code: input.code,
+    code_expires: input.codeExpires,
+    code_attempts: 0,
+    created_at: Date.now(),
+  }
+  data.users.push(user)
+  persist()
+  return user
 }
 
 export function setUserCode(id: string, code: string, codeExpires: number) {
-  db.prepare('UPDATE users SET code = ?, code_expires = ?, code_attempts = 0 WHERE id = ?').run(
-    code,
-    codeExpires,
-    id,
-  )
+  const user = data.users.find((u) => u.id === id)
+  if (!user) return
+  user.code = code
+  user.code_expires = codeExpires
+  user.code_attempts = 0
+  persist()
 }
 
 export function incCodeAttempts(id: string) {
-  db.prepare('UPDATE users SET code_attempts = code_attempts + 1 WHERE id = ?').run(id)
+  const user = data.users.find((u) => u.id === id)
+  if (!user) return
+  user.code_attempts += 1
+  persist()
 }
 
 export function markVerified(id: string) {
-  db.prepare(
-    'UPDATE users SET verified = 1, code = NULL, code_expires = NULL, code_attempts = 0 WHERE id = ?',
-  ).run(id)
+  const user = data.users.find((u) => u.id === id)
+  if (!user) return
+  user.verified = 1
+  user.code = null
+  user.code_expires = null
+  user.code_attempts = 0
+  persist()
 }
