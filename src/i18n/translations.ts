@@ -13,6 +13,7 @@ export const translations = {
     'login.feature1': 'Ізольовані Data Rooms під кожну угоду',
     'login.feature2': 'Вкладені папки, версії, миттєвий перегляд',
     'login.feature3': 'Доступ лише для авторизованих користувачів',
+    'login.feature4': 'Шифрування вмісту паролем (AES-256-GCM)',
     'login.confidential': '© {year} Acme Corp · Confidential',
     'login.title': 'Вхід у сховище',
     'login.subtitle': 'Увійдіть, щоб отримати доступ до файлів.',
@@ -57,6 +58,8 @@ export const translations = {
 
     // shell
     'shell.allRooms': 'Усі Data Rooms',
+    'shell.roomsPlain': 'Незахищені',
+    'shell.roomsEncrypted': 'Захищені',
     'shell.signOut': 'Вийти',
     'shell.demoAccount': 'Демо-акаунт',
     'shell.language': 'Мова',
@@ -195,6 +198,7 @@ export const translations = {
     'login.feature1': 'Isolated Data Rooms for every deal',
     'login.feature2': 'Nested folders, versions, instant preview',
     'login.feature3': 'Access for authorized users only',
+    'login.feature4': 'Password encryption of contents (AES-256-GCM)',
     'login.confidential': '© {year} Acme Corp · Confidential',
     'login.title': 'Sign in to the vault',
     'login.subtitle': 'Sign in to access your files.',
@@ -237,6 +241,8 @@ export const translations = {
     'auth.err.server_error': 'Server error',
 
     'shell.allRooms': 'All Data Rooms',
+    'shell.roomsPlain': 'Unprotected',
+    'shell.roomsEncrypted': 'Protected',
     'shell.signOut': 'Sign out',
     'shell.demoAccount': 'Demo account',
     'shell.language': 'Language',

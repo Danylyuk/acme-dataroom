@@ -1,18 +1,29 @@
 import * as React from 'react'
-import { Link } from '@tanstack/react-router'
-import { Lock, Loader2, ChevronLeft } from 'lucide-react'
+import { Lock, Loader2 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useI18n } from '@/i18n/LanguageContext'
 
-/** Екран введення пароля для зашифрованого Data Room. */
+/**
+ * Модалка розблокування зашифрованого Data Room (backdrop blur).
+ * Закриття (X / клік поза / Esc) → onCancel (повернення до списку).
+ */
 export function UnlockScreen({
   roomName,
   onUnlock,
+  onCancel,
 }: {
   roomName: string
   onUnlock: (passphrase: string) => Promise<boolean>
+  onCancel: () => void
 }) {
   const { t } = useI18n()
   const [pass, setPass] = React.useState('')
@@ -33,30 +44,25 @@ export function UnlockScreen({
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm">
-        <Link
-          to="/"
-          className="mb-8 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ChevronLeft className="size-4" /> {t('shell.allRooms')}
-        </Link>
+    <Dialog open onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <div className="mb-1 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Lock className="size-5" />
+          </div>
+          <DialogTitle>{t('lock.unlockTitle')}</DialogTitle>
+          <p className="truncate text-sm font-medium text-foreground">{roomName}</p>
+          <DialogDescription>{t('lock.unlockDesc')}</DialogDescription>
+        </DialogHeader>
 
-        <div className="mb-5 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <Lock className="size-6" />
-        </div>
-
-        <h1 className="text-xl font-semibold tracking-tight">{t('lock.unlockTitle')}</h1>
-        <p className="mt-1 truncate text-sm font-medium text-muted-foreground">{roomName}</p>
-        <p className="mt-3 text-sm text-muted-foreground">{t('lock.unlockDesc')}</p>
-
-        <form onSubmit={submit} className="mt-6 space-y-4">
+        <form onSubmit={submit} className="mt-2 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="unlock-pass">{t('lock.passLabel')}</Label>
             <Input
               id="unlock-pass"
               type="password"
               autoFocus
+              autoComplete="off"
               value={pass}
               placeholder="••••••••"
               aria-invalid={error}
@@ -71,7 +77,7 @@ export function UnlockScreen({
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Lock />} {t('lock.unlock')}
           </Button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

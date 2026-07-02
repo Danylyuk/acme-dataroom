@@ -1,4 +1,4 @@
-import { ShieldCheck, Lock, FolderLock, FileCheck2 } from 'lucide-react'
+import { ShieldCheck, Lock, FolderLock, FileCheck2, KeyRound } from 'lucide-react'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { useI18n } from '@/i18n/LanguageContext'
 import { AuthPanel } from './AuthPanel'
@@ -25,6 +25,9 @@ export function LoginPage() {
       </li>
       <li className="flex items-center gap-3">
         <Lock className="size-4 shrink-0 text-primary" /> {t('login.feature3')}
+      </li>
+      <li className="flex items-center gap-3">
+        <KeyRound className="size-4 shrink-0 text-primary" /> {t('login.feature4')}
       </li>
     </ul>
   )

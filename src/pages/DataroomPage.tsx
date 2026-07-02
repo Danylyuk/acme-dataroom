@@ -12,6 +12,7 @@ import {
   Home,
   FolderOpen,
   Loader2,
+  Lock,
 } from 'lucide-react'
 import type { TreeNode } from '@/db/types'
 import { getFileBlob, countSubtree, unlockDataroom, isUnlocked } from '@/db/api'
@@ -146,17 +147,23 @@ export function DataroomPage() {
     return children.filter((n) => n.name.toLowerCase().includes(q))
   }, [children, query])
 
-  // Зашифрований сейф і ще не розблокований у цій сесії → екран пароля
+  // Зашифрований сейф і ще не розблокований у цій сесії → модалка пароля поверх фону
   if (room?.encrypted && !unlocked) {
     return (
-      <UnlockScreen
-        roomName={room.name}
-        onUnlock={async (pass) => {
-          const ok = await unlockDataroom(roomId, pass)
-          if (ok) setUnlocked(true)
-          return ok
-        }}
-      />
+      <>
+        <div className="flex min-h-svh flex-col items-center justify-center gap-3 text-muted-foreground/25">
+          <Lock className="size-20" />
+        </div>
+        <UnlockScreen
+          roomName={room.name}
+          onCancel={() => navigate({ to: '/' })}
+          onUnlock={async (pass) => {
+            const ok = await unlockDataroom(roomId, pass)
+            if (ok) setUnlocked(true)
+            return ok
+          }}
+        />
+      </>
     )
   }
 

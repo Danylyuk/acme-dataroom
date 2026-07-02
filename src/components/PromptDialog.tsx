@@ -28,6 +28,7 @@ export function PromptDialog({
   minLength = 1,
   hint,
   validate,
+  autoComplete,
   onSubmit,
 }: {
   open: boolean
@@ -40,6 +41,7 @@ export function PromptDialog({
   confirmText?: string
   type?: string
   minLength?: number
+  autoComplete?: string
   /** приглушена підказка під полем */
   hint?: string
   /** повертає текст помилки або null, якщо все ок */
@@ -90,9 +92,12 @@ export function PromptDialog({
               type={type}
               value={value}
               placeholder={placeholder}
+              autoComplete={autoComplete}
               aria-invalid={touched && !!error}
-              onChange={(e) => setValue(e.target.value)}
-              onBlur={() => setTouched(true)}
+              onChange={(e) => {
+                setValue(e.target.value)
+                setTouched(true)
+              }}
               onFocus={(e) => {
                 if (type !== 'text') return
                 // при перейменуванні виділяємо ім'я без розширення
@@ -101,10 +106,10 @@ export function PromptDialog({
                 else e.target.select()
               }}
             />
-            {touched && error ? (
+            {/* Підказку з вимогами показуємо завжди; помилку — лише після вводу */}
+            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+            {touched && error && value.length > 0 && (
               <p className="text-sm text-destructive">{error}</p>
-            ) : (
-              hint && <p className="text-xs text-muted-foreground">{hint}</p>
             )}
           </div>
           <DialogFooter>

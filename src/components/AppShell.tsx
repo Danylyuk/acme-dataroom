@@ -1,7 +1,7 @@
 import * as React from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useSearch } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { FolderLock, LayoutGrid, LogOut, Pencil } from 'lucide-react'
+import { FolderLock, LayoutGrid, LogOut, Pencil, ShieldCheck, Folders } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { useI18n } from '@/i18n/LanguageContext'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
@@ -39,9 +39,15 @@ function Sidebar() {
       </Link>
 
       {/* Навігація — на мобілці ховаємо, лишаємо бренд + профіль */}
-      <nav className="hidden flex-1 md:block">
-        <SidebarLink to="/" icon={<LayoutGrid className="size-4" />}>
+      <nav className="hidden flex-1 space-y-1 md:block">
+        <SidebarLink filter={undefined} icon={<LayoutGrid className="size-4" />}>
           {t('shell.allRooms')}
+        </SidebarLink>
+        <SidebarLink filter="plain" icon={<Folders className="size-4" />}>
+          {t('shell.roomsPlain')}
+        </SidebarLink>
+        <SidebarLink filter="encrypted" icon={<ShieldCheck className="size-4" />}>
+          {t('shell.roomsEncrypted')}
         </SidebarLink>
       </nav>
 
@@ -56,19 +62,26 @@ function Sidebar() {
 }
 
 function SidebarLink({
-  to,
+  filter,
   icon,
   children,
 }: {
-  to: string
+  filter: 'plain' | 'encrypted' | undefined
   icon: React.ReactNode
   children: React.ReactNode
 }) {
+  const search = useSearch({ strict: false }) as { filter?: string }
+  const active = (search.filter ?? undefined) === filter
   return (
     <Link
-      to={to}
-      className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&.active]:bg-sidebar-accent [&.active]:text-sidebar-accent-foreground"
-      activeOptions={{ exact: true }}
+      to="/"
+      search={{ filter }}
+      className={
+        'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ' +
+        (active
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
+      }
     >
       {icon}
       {children}

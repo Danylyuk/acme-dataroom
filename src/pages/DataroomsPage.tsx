@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useSearch } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import {
   FolderPlus,
@@ -47,7 +47,15 @@ import { formatRelativeTime, isStrongPassword } from '@/lib/utils'
 
 export function DataroomsPage() {
   const { t } = useI18n()
-  const { data: rooms, isLoading } = useDatarooms()
+  const { filter } = useSearch({ from: '/' })
+  const { data: allRooms, isLoading } = useDatarooms()
+
+  const rooms = React.useMemo(() => {
+    if (!allRooms) return allRooms
+    if (filter === 'encrypted') return allRooms.filter((r) => r.encrypted)
+    if (filter === 'plain') return allRooms.filter((r) => !r.encrypted)
+    return allRooms
+  }, [allRooms, filter])
   const createRoom = useCreateDataroom()
   const renameRoom = useRenameDataroom()
   const deleteRoom = useDeleteDataroom()
@@ -162,6 +170,7 @@ export function DataroomsPage() {
         type="password"
         minLength={6}
         hint={t('lock.passHint')}
+        autoComplete="new-password"
         validate={(v) => (isStrongPassword(v) ? null : t('lock.passWeak'))}
         placeholder="••••••••"
         confirmText={t('lock.encrypt')}

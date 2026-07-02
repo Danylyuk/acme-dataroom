@@ -26,6 +26,10 @@ const rootRoute = createRootRoute({ component: RootComponent })
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  // фільтр списку сейфів: усі / незахищені / зашифровані
+  validateSearch: (search: Record<string, unknown>): { filter?: 'plain' | 'encrypted' } => ({
+    filter: search.filter === 'plain' || search.filter === 'encrypted' ? search.filter : undefined,
+  }),
   component: DataroomsPage,
 })
 
