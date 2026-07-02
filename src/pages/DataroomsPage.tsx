@@ -43,7 +43,8 @@ import { PromptDialog } from '@/components/PromptDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
 import { useI18n } from '@/i18n/LanguageContext'
-import { formatRelativeTime, isStrongPassword } from '@/lib/utils'
+import { LockDialog } from './LockDialog'
+import { formatRelativeTime } from '@/lib/utils'
 
 export function DataroomsPage() {
   const { t } = useI18n()
@@ -160,21 +161,12 @@ export function DataroomsPage() {
         }}
       />
 
-      {/* Захистити паролем (шифрування) */}
-      <PromptDialog
+      {/* Захистити паролем (шифрування) — пароль + повтор */}
+      <LockDialog
+        roomName={locking?.name ?? ''}
         open={!!locking}
         onOpenChange={(o) => !o && setLocking(null)}
-        title={t('lock.setTitle', { name: locking?.name ?? '' })}
-        description={t('lock.setDesc')}
-        label={t('lock.passLabel')}
-        type="password"
-        minLength={6}
-        hint={t('lock.passHint')}
-        autoComplete="new-password"
-        validate={(v) => (isStrongPassword(v) ? null : t('lock.passWeak'))}
-        placeholder="••••••••"
-        confirmText={t('lock.encrypt')}
-        onSubmit={async (pass) => {
+        onConfirm={async (pass) => {
           if (!locking) return
           await lockDataroom(locking.id, pass)
           qc.invalidateQueries({ queryKey: qk.datarooms })
