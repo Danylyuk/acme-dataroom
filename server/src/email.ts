@@ -14,7 +14,7 @@ export async function sendVerificationCode(email: string, code: string): Promise
   }
 
   const resend = new Resend(apiKey)
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from,
     to: email,
     subject: `${code} — код підтвердження Acme Corp. Data Room`,
@@ -32,4 +32,10 @@ export async function sendVerificationCode(email: string, code: string): Promise
       </div>
     `,
   })
+
+  if (error) {
+    console.error('[email] Resend send error:', JSON.stringify(error))
+    throw new Error(`Resend: ${error.message || 'send failed'}`)
+  }
+  console.log(`[email] Код надіслано на ${email} (id: ${data?.id})`)
 }
