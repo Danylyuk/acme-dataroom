@@ -6,6 +6,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/auth/AuthContext'
+import { LanguageProvider } from '@/i18n/LanguageContext'
 import { router } from '@/router'
 import './index.css'
 
@@ -22,12 +23,14 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider delayDuration={200}>
-            <RouterProvider router={router} />
-            <Toaster />
-          </TooltipProvider>
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <TooltipProvider delayDuration={200}>
+              <RouterProvider router={router} />
+              <Toaster />
+            </TooltipProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </QueryClientProvider>
     </GoogleOAuthProvider>
   </StrictMode>,

@@ -29,9 +29,11 @@ import {
 import { PromptDialog } from '@/components/PromptDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
+import { useI18n } from '@/i18n/LanguageContext'
 import { formatRelativeTime } from '@/lib/utils'
 
 export function DataroomsPage() {
+  const { t } = useI18n()
   const { data: rooms, isLoading } = useDatarooms()
   const createRoom = useCreateDataroom()
   const renameRoom = useRenameDataroom()
@@ -46,14 +48,12 @@ export function DataroomsPage() {
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Data Room-и
+            {t('rooms.title')}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Ізольовані захищені сховища документів — по одному на кожну угоду.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t('rooms.subtitle')}</p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
-          <FolderPlus /> Новий Data Room
+          <FolderPlus /> {t('rooms.new')}
         </Button>
       </header>
 
@@ -62,11 +62,11 @@ export function DataroomsPage() {
       ) : !rooms || rooms.length === 0 ? (
         <EmptyState
           icon={<FolderLock />}
-          title="Ще немає жодного Data Room"
-          description="Створіть перше сховище, щоб почати завантажувати документи due diligence."
+          title={t('rooms.emptyTitle')}
+          description={t('rooms.emptyDesc')}
           action={
             <Button onClick={() => setCreateOpen(true)}>
-              <FolderPlus /> Створити Data Room
+              <FolderPlus /> {t('rooms.emptyAction')}
             </Button>
           }
         />
@@ -87,14 +87,14 @@ export function DataroomsPage() {
       <PromptDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        title="Новий Data Room"
-        description="Назвіть сховище — наприклад, за назвою угоди чи компанії."
-        label="Назва Data Room"
-        placeholder="Project Titan — Acquisition"
-        confirmText="Створити"
+        title={t('rooms.createTitle')}
+        description={t('rooms.createDesc')}
+        label={t('rooms.createLabel')}
+        placeholder={t('rooms.createPlaceholder')}
+        confirmText={t('rooms.create')}
         onSubmit={async (name) => {
           await createRoom.mutateAsync(name)
-          toast.success('Data Room створено')
+          toast.success(t('rooms.created'))
         }}
       />
 
@@ -102,13 +102,14 @@ export function DataroomsPage() {
       <PromptDialog
         open={!!renaming}
         onOpenChange={(o) => !o && setRenaming(null)}
-        title="Перейменувати Data Room"
-        label="Назва"
+        title={t('rooms.renameTitle')}
+        label={t('props.name')}
+        confirmText={t('common.save')}
         initialValue={renaming?.name ?? ''}
         onSubmit={async (name) => {
           if (renaming) {
             await renameRoom.mutateAsync({ id: renaming.id, name })
-            toast.success('Назву оновлено')
+            toast.success(t('rooms.renamed'))
           }
         }}
       />
@@ -117,12 +118,13 @@ export function DataroomsPage() {
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(o) => !o && setDeleting(null)}
-        title={`Видалити «${deleting?.name}»?`}
-        description="Буде безповоротно видалено сам Data Room і ВСІ папки та файли всередині."
+        title={t('rooms.deleteTitle', { name: deleting?.name ?? '' })}
+        confirmText={t('common.delete')}
+        description={t('rooms.deleteDesc')}
         onConfirm={async () => {
           if (deleting) {
             await deleteRoom.mutateAsync(deleting.id)
-            toast.success('Data Room видалено')
+            toast.success(t('rooms.deleted'))
           }
         }}
       />
@@ -139,6 +141,7 @@ function DataroomCard({
   onRename: () => void
   onDelete: () => void
 }) {
+  const { t, plural, locale } = useI18n()
   const { data: fileCount } = useFileCount(room.id)
 
   return (
@@ -159,10 +162,10 @@ function DataroomCard({
         <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <FileText className="size-3.5" />
-            {fileCount ?? 0} {pluralFiles(fileCount ?? 0)}
+            {t('rooms.files', { n: fileCount ?? 0, plural: plural(fileCount ?? 0, 'file') })}
           </span>
           <span>·</span>
-          <span>{formatRelativeTime(room.updatedAt)}</span>
+          <span>{formatRelativeTime(room.updatedAt, t, locale)}</span>
         </div>
       </Link>
 
@@ -192,14 +195,6 @@ function DataroomCard({
       </div>
     </Card>
   )
-}
-
-function pluralFiles(n: number): string {
-  const mod10 = n % 10
-  const mod100 = n % 100
-  if (mod10 === 1 && mod100 !== 11) return 'файл'
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'файли'
-  return 'файлів'
 }
 
 function SkeletonGrid() {

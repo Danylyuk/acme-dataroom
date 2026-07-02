@@ -25,6 +25,7 @@ import {
   useDeleteNode,
   useMoveNode,
 } from '@/hooks/queries'
+import { useI18n } from '@/i18n/LanguageContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PromptDialog } from '@/components/PromptDialog'
@@ -32,12 +33,15 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
 import { NodeTile } from './NodeTile'
 import { PdfViewerDialog } from './PdfViewerDialog'
+import { MoveDialog } from './MoveDialog'
+import { PropertiesDialog } from './PropertiesDialog'
 import { cn } from '@/lib/utils'
 
 export function DataroomPage() {
   const { roomId } = useParams({ from: '/r/$roomId' })
   const { folder } = useSearch({ from: '/r/$roomId' })
   const navigate = useNavigate()
+  const { t, plural } = useI18n()
   const currentFolder = folder ?? null
 
   const { data: room } = useDataroom(roomId)
@@ -57,6 +61,8 @@ export function DataroomPage() {
   const [deleting, setDeleting] = React.useState<TreeNode | null>(null)
   const [deleteInfo, setDeleteInfo] = React.useState<{ folders: number; files: number } | null>(null)
   const [viewing, setViewing] = React.useState<TreeNode | null>(null)
+  const [moving, setMoving] = React.useState<TreeNode | null>(null)
+  const [propsNode, setPropsNode] = React.useState<TreeNode | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   function goToFolder(id: string | null) {
@@ -66,24 +72,29 @@ export function DataroomPage() {
   // ── Upload (тільки PDF) ──
   const handleFiles = React.useCallback(
     async (files: File[]) => {
-      const pdfs = files.filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
+      const pdfs = files.filter(
+        (f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'),
+      )
       const rejected = files.length - pdfs.length
-      if (rejected > 0) toast.warning(`Пропущено ${rejected}: приймаються лише PDF`)
+      if (rejected > 0) toast.warning(t('room.skipped', { n: rejected }))
       if (pdfs.length === 0) return
 
-      const tid = toast.loading(`Завантаження 0/${pdfs.length}…`)
+      const tid = toast.loading(t('room.uploadProgress', { done: 0, total: pdfs.length }))
       try {
         await uploadFiles.mutateAsync({
           parentId: currentFolder,
           files: pdfs,
-          onProgress: (done, total) => toast.loading(`Завантаження ${done}/${total}…`, { id: tid }),
+          onProgress: (done, total) =>
+            toast.loading(t('room.uploadProgress', { done, total }), { id: tid }),
         })
-        toast.success(`Завантажено ${pdfs.length} ${pdfs.length === 1 ? 'файл' : 'файлів'}`, { id: tid })
+        toast.success(t('room.uploaded', { n: pdfs.length, plural: plural(pdfs.length, 'file') }), {
+          id: tid,
+        })
       } catch {
-        toast.error('Помилка завантаження', { id: tid })
+        toast.error(t('room.uploadError'), { id: tid })
       }
     },
-    [currentFolder, uploadFiles],
+    [currentFolder, uploadFiles, t, plural],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -93,7 +104,6 @@ export function DataroomPage() {
     noKeyboard: true,
   })
 
-  // ── Open (папка → навігація, файл → перегляд) ──
   function openNode(node: TreeNode) {
     if (node.type === 'folder') goToFolder(node.id)
     else setViewing(node)
@@ -101,7 +111,7 @@ export function DataroomPage() {
 
   async function downloadNode(node: TreeNode) {
     const blob = await getFileBlob(node.id)
-    if (!blob) return toast.error('Файл не знайдено')
+    if (!blob) return toast.error(t('node.notFound'))
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -116,12 +126,12 @@ export function DataroomPage() {
     else setDeleteInfo(null)
   }
 
-  async function handleMove(draggedId: string, targetFolderId: string) {
+  async function handleMove(draggedId: string, targetFolderId: string | null) {
     try {
       await moveNode.mutateAsync({ id: draggedId, newParentId: targetFolderId })
-      toast.success('Переміщено')
+      toast.success(t('room.moved'))
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Не вдалося перемістити')
+      toast.error(e instanceof Error ? e.message : t('room.moveError'))
     }
   }
 
@@ -147,16 +157,15 @@ export function DataroomPage() {
         }}
       />
 
-      {/* Хедер: breadcrumbs + дії */}
       <header className="sticky top-0 z-10 border-b bg-background/80 px-4 py-3 backdrop-blur sm:px-8">
         <div className="mx-auto flex max-w-6xl flex-col gap-3">
           <Breadcrumbs roomName={room?.name ?? '…'} crumbs={crumbs ?? []} onNavigate={goToFolder} />
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" onClick={() => fileInputRef.current?.click()}>
-              <Upload /> Завантажити PDF
+              <Upload /> {t('room.upload')}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setNewFolderOpen(true)}>
-              <FolderPlus /> Нова папка
+              <FolderPlus /> {t('room.newFolder')}
             </Button>
 
             <div className="relative ml-auto w-full sm:w-64">
@@ -164,7 +173,7 @@ export function DataroomPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Пошук у цій папці…"
+                placeholder={t('room.search')}
                 className="pl-8"
               />
             </div>
@@ -181,7 +190,6 @@ export function DataroomPage() {
         </div>
       </header>
 
-      {/* Контент */}
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-8">
         {isLoading ? (
           <div className="flex justify-center py-20">
@@ -189,19 +197,23 @@ export function DataroomPage() {
           </div>
         ) : filtered.length === 0 ? (
           query ? (
-            <EmptyState icon={<Search />} title="Нічого не знайдено" description={`За запитом «${query}» немає файлів чи папок.`} />
+            <EmptyState
+              icon={<Search />}
+              title={t('room.noResultsTitle')}
+              description={t('room.noResultsDesc', { q: query })}
+            />
           ) : (
             <EmptyState
               icon={<FolderOpen />}
-              title="Порожня папка"
-              description="Перетягніть PDF сюди або скористайтесь кнопками вгорі, щоб додати документи."
+              title={t('room.emptyTitle')}
+              description={t('room.emptyDesc')}
               action={
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => fileInputRef.current?.click()}>
-                    <Upload /> Завантажити PDF
+                    <Upload /> {t('room.upload')}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setNewFolderOpen(true)}>
-                    <FolderPlus /> Нова папка
+                    <FolderPlus /> {t('room.newFolder')}
                   </Button>
                 </div>
               }
@@ -210,77 +222,112 @@ export function DataroomPage() {
         ) : view === 'grid' ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {filtered.map((node) => (
-              <NodeTile key={node.id} node={node} view="grid" onOpen={openNode} onRename={setRenaming} onDelete={askDelete} onDownload={downloadNode} onDropNode={handleMove} />
+              <NodeTile
+                key={node.id}
+                node={node}
+                view="grid"
+                onOpen={openNode}
+                onRename={setRenaming}
+                onDelete={askDelete}
+                onDownload={downloadNode}
+                onMove={setMoving}
+                onProperties={setPropsNode}
+                onDropNode={handleMove}
+              />
             ))}
           </div>
         ) : (
           <div className="rounded-xl border">
             <div className="flex items-center gap-3 border-b px-3 py-2 text-xs font-medium text-muted-foreground">
-              <span className="flex-1 pl-8">Назва</span>
-              <span className="hidden w-24 text-right sm:block">Розмір</span>
-              <span className="hidden w-28 text-right md:block">Змінено</span>
+              <span className="flex-1 pl-8">{t('room.colName')}</span>
+              <span className="hidden w-24 text-right sm:block">{t('room.colSize')}</span>
+              <span className="hidden w-28 text-right md:block">{t('room.colModified')}</span>
               <span className="w-8" />
             </div>
             <div className="p-1.5">
               {filtered.map((node) => (
-                <NodeTile key={node.id} node={node} view="list" onOpen={openNode} onRename={setRenaming} onDelete={askDelete} onDownload={downloadNode} onDropNode={handleMove} />
+                <NodeTile
+                  key={node.id}
+                  node={node}
+                  view="list"
+                  onOpen={openNode}
+                  onRename={setRenaming}
+                  onDelete={askDelete}
+                  onDownload={downloadNode}
+                  onMove={setMoving}
+                  onProperties={setPropsNode}
+                  onDropNode={handleMove}
+                />
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Оверлей drag-and-drop */}
       {isDragActive && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-primary bg-card px-10 py-8 shadow-lg">
             <Upload className="size-8 text-primary" />
-            <p className="font-medium">Відпустіть, щоб завантажити PDF</p>
+            <p className="font-medium">{t('room.dropHint')}</p>
           </div>
         </div>
       )}
 
-      {/* Діалоги */}
       <PromptDialog
         open={newFolderOpen}
         onOpenChange={setNewFolderOpen}
-        title="Нова папка"
-        label="Назва папки"
-        placeholder="Фінансові звіти"
-        confirmText="Створити"
+        title={t('room.newFolderTitle')}
+        label={t('room.newFolderLabel')}
+        placeholder={t('room.newFolderPlaceholder')}
+        confirmText={t('rooms.create')}
         onSubmit={async (name) => {
           await createFolder.mutateAsync({ parentId: currentFolder, name })
-          toast.success('Папку створено')
+          toast.success(t('room.folderCreated'))
         }}
       />
       <PromptDialog
         open={!!renaming}
         onOpenChange={(o) => !o && setRenaming(null)}
-        title={renaming?.type === 'folder' ? 'Перейменувати папку' : 'Перейменувати файл'}
-        label="Назва"
+        title={renaming?.type === 'folder' ? t('room.renameFolderTitle') : t('room.renameFileTitle')}
+        label={t('props.name')}
         initialValue={renaming?.name ?? ''}
+        confirmText={t('common.save')}
         onSubmit={async (name) => {
           if (renaming) {
             await renameNode.mutateAsync({ id: renaming.id, name })
-            toast.success('Назву оновлено')
+            toast.success(t('node.renamed'))
           }
         }}
       />
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(o) => !o && (setDeleting(null), setDeleteInfo(null))}
-        title={`Видалити «${deleting?.name}»?`}
+        title={t('room.deleteTitle', { name: deleting?.name ?? '' })}
+        confirmText={t('common.delete')}
         description={
           deleting?.type === 'folder' && deleteInfo && (deleteInfo.files > 0 || deleteInfo.folders > 0)
-            ? `Разом з папкою буде видалено ${deleteInfo.folders} вкл. папок і ${deleteInfo.files} файлів. Дію не можна скасувати.`
-            : 'Дію не можна скасувати.'
+            ? t('room.deleteFolderDesc', { folders: deleteInfo.folders, files: deleteInfo.files })
+            : t('room.deleteSimpleDesc')
         }
         onConfirm={async () => {
           if (deleting) {
             await deleteNode.mutateAsync(deleting.id)
-            toast.success('Видалено')
+            toast.success(t('node.deleted'))
           }
         }}
+      />
+      <MoveDialog
+        node={moving}
+        roomId={roomId}
+        open={!!moving}
+        onOpenChange={(o) => !o && setMoving(null)}
+        onMove={handleMove}
+      />
+      <PropertiesDialog
+        node={propsNode}
+        roomName={room?.name ?? ''}
+        open={!!propsNode}
+        onOpenChange={(o) => !o && setPropsNode(null)}
       />
       <PdfViewerDialog node={viewing} open={!!viewing} onOpenChange={(o) => !o && setViewing(null)} />
     </div>

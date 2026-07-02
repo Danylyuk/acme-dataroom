@@ -86,6 +86,21 @@ export async function getNode(id: string): Promise<TreeNode | undefined> {
   return db.nodes.get(id)
 }
 
+/** Усі папки сейфу — для діалогу «Перемістити». */
+export async function listAllFolders(dataroomId: string): Promise<TreeNode[]> {
+  return db.nodes
+    .where('dataroomId')
+    .equals(dataroomId)
+    .filter((n) => n.type === 'folder')
+    .toArray()
+}
+
+/** id-множина піддерева вузла (сам вузол + нащадки) — щоб не переносити в себе. */
+export async function subtreeIds(rootId: string): Promise<Set<string>> {
+  const nodes = await collectSubtree(rootId)
+  return new Set(nodes.map((n) => n.id))
+}
+
 /** Ланцюжок предків від кореня до вузла — для breadcrumbs. */
 export async function getBreadcrumbs(nodeId: string | null): Promise<TreeNode[]> {
   const chain: TreeNode[] = []

@@ -1,7 +1,9 @@
 import * as React from 'react'
 import { Link } from '@tanstack/react-router'
-import { FolderLock, LayoutGrid, LogOut, HardDrive } from 'lucide-react'
+import { FolderLock, LayoutGrid, LogOut } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
+import { useI18n } from '@/i18n/LanguageContext'
+import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -23,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function Sidebar() {
+  const { t } = useI18n()
   return (
     <aside className="flex shrink-0 items-center justify-between gap-2 border-b border-sidebar-border bg-sidebar px-4 py-3 text-sidebar-foreground md:h-svh md:w-64 md:flex-col md:items-stretch md:justify-start md:border-b-0 md:border-r md:px-3 md:py-5">
       {/* Бренд */}
@@ -30,21 +33,20 @@ function Sidebar() {
         <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <FolderLock className="size-4.5" />
         </div>
-        <span className="text-[15px] font-semibold tracking-tight">Acme Data Room</span>
+        <span className="text-[15px] font-semibold tracking-tight">{t('brand')}</span>
       </Link>
 
       {/* Навігація — на мобілці ховаємо, лишаємо бренд + профіль */}
       <nav className="hidden flex-1 md:block">
         <SidebarLink to="/" icon={<LayoutGrid className="size-4" />}>
-          Усі Data Room-и
+          {t('shell.allRooms')}
         </SidebarLink>
-        <div className="mt-6 px-3 text-xs font-medium uppercase tracking-wide text-sidebar-foreground/40">
-          Сховище
-        </div>
-        <div className="mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/60">
-          <HardDrive className="size-4" /> Локальне (IndexedDB)
-        </div>
       </nav>
+
+      {/* перемикач мови — desktop */}
+      <div className="mt-auto hidden px-2 pb-3 md:block">
+        <LanguageSwitch variant="dark" />
+      </div>
 
       <UserMenu />
     </aside>
@@ -74,6 +76,7 @@ function SidebarLink({
 
 function UserMenu() {
   const { user, signOut } = useAuth()
+  const { t } = useI18n()
   if (!user) return null
   const initials = user.name
     .split(' ')
@@ -94,11 +97,17 @@ function UserMenu() {
           <div className="truncate text-xs text-sidebar-foreground/50">{user.email}</div>
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>{user.email || 'Демо-акаунт'}</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuLabel>{user.email || t('shell.demoAccount')}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {/* перемикач мови — доступний у меню (важливо для мобілки) */}
+        <div className="flex items-center justify-between px-2.5 py-1.5">
+          <span className="text-sm text-muted-foreground">{t('shell.language')}</span>
+          <LanguageSwitch />
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={signOut}>
-          <LogOut /> Вийти
+          <LogOut /> {t('shell.signOut')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

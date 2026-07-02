@@ -16,20 +16,34 @@ export function formatBytes(bytes: number): string {
   return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
 }
 
-/** Відносна дата: "щойно", "5 хв тому", "2 год тому", інакше — дата. */
-export function formatRelativeTime(ts: number): string {
+type TimeKey = 'time.now' | 'time.min' | 'time.hour' | 'time.day'
+type Translator = (key: TimeKey, vars?: Record<string, string | number>) => string
+
+/** Відносна дата, локалізована: "щойно"/"just now", "5 хв тому"/"5 min ago", інакше — дата. */
+export function formatRelativeTime(ts: number, t: Translator, locale: string): string {
   const diff = Date.now() - ts
   const sec = Math.floor(diff / 1000)
-  if (sec < 60) return 'щойно'
+  if (sec < 60) return t('time.now')
   const min = Math.floor(sec / 60)
-  if (min < 60) return `${min} хв тому`
+  if (min < 60) return t('time.min', { n: min })
   const hrs = Math.floor(min / 60)
-  if (hrs < 24) return `${hrs} год тому`
+  if (hrs < 24) return t('time.hour', { n: hrs })
   const days = Math.floor(hrs / 24)
-  if (days < 7) return `${days} дн тому`
-  return new Date(ts).toLocaleDateString('uk-UA', {
+  if (days < 7) return t('time.day', { n: days })
+  return new Date(ts).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+  })
+}
+
+/** Повна дата+час для діалогу властивостей. */
+export function formatDateTime(ts: number, locale: string): string {
+  return new Date(ts).toLocaleString(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }

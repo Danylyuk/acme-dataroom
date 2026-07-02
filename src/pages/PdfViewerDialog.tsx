@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { useI18n } from '@/i18n/LanguageContext'
 import { formatBytes } from '@/lib/utils'
 
 /** Модалка перегляду PDF: тягне Blob з IndexedDB → object URL → <iframe>. */
@@ -21,6 +22,7 @@ export function PdfViewerDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { t } = useI18n()
   const [url, setUrl] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(false)
 
@@ -67,7 +69,7 @@ export function PdfViewerDialog({
             )}
           </div>
           <Button variant="outline" size="sm" onClick={download} disabled={!url}>
-            <Download /> <span className="hidden sm:inline">Завантажити</span>
+            <Download /> <span className="hidden sm:inline">{t('node.download')}</span>
           </Button>
         </DialogHeader>
 

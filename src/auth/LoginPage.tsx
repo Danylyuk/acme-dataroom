@@ -2,90 +2,106 @@ import { GoogleLogin } from '@react-oauth/google'
 import { ShieldCheck, Lock, FolderLock, FileCheck2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { LanguageSwitch } from '@/components/LanguageSwitch'
+import { useI18n } from '@/i18n/LanguageContext'
 import { useAuth, decodeGoogleJwt, type User } from './AuthContext'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
 export function LoginPage() {
   const { signIn } = useAuth()
+  const { t } = useI18n()
 
   function handleGoogle(credential?: string) {
-    if (!credential) {
-      toast.error('Не вдалося увійти через Google')
-      return
-    }
+    if (!credential) return toast.error(t('login.googleError'))
     const p = decodeGoogleJwt(credential)
     const user: User = {
-      name: p.name ?? 'Користувач',
+      name: p.name ?? 'User',
       email: p.email ?? '',
       picture: p.picture,
       provider: 'google',
     }
     signIn(user)
-    toast.success(`Вітаємо, ${user.name.split(' ')[0]}!`)
+    toast.success(t('login.welcome', { name: user.name.split(' ')[0] }))
   }
 
   function handleDemo() {
     signIn({ name: 'Demo User', email: 'demo@acmecorp.com', provider: 'demo' })
   }
 
+  const brand = (
+    <div className="flex items-center gap-2.5">
+      <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+        <FolderLock className="size-5" />
+      </div>
+      <span className="text-lg font-semibold tracking-tight">{t('brand')}</span>
+    </div>
+  )
+
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
-      {/* Лівий брендовий графітовий панель — ховаємо на мобілці */}
+      {/* Ліва брендова панель — тільки desktop */}
       <div className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-10 text-sidebar-foreground lg:flex">
         <div
           className="pointer-events-none absolute -right-24 -top-24 size-96 rounded-full opacity-20 blur-3xl"
           style={{ background: 'var(--primary)' }}
         />
-        <div className="relative flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <FolderLock className="size-5" />
-          </div>
-          <span className="text-lg font-semibold tracking-tight">Acme Data Room</span>
-        </div>
+        <div className="relative">{brand}</div>
 
         <div className="relative space-y-6">
           <h1 className="max-w-md text-4xl font-semibold leading-tight tracking-tight">
-            Безпечний простір для документів вашої угоди
+            {t('login.heroTitle')}
           </h1>
-          <p className="max-w-md text-sidebar-foreground/70">
-            Організовуйте, зберігайте й діліться конфіденційними документами
-            due diligence — в одному захищеному сховищі.
-          </p>
+          <p className="max-w-md text-sidebar-foreground/70">{t('login.heroSubtitle')}</p>
           <ul className="space-y-3 text-sm text-sidebar-foreground/80">
             <li className="flex items-center gap-3">
-              <ShieldCheck className="size-4 text-primary" /> Ізольовані Data Room-и під кожну угоду
+              <ShieldCheck className="size-4 text-primary" /> {t('login.feature1')}
             </li>
             <li className="flex items-center gap-3">
-              <FileCheck2 className="size-4 text-primary" /> Вкладені папки, версії, миттєвий перегляд
+              <FileCheck2 className="size-4 text-primary" /> {t('login.feature2')}
             </li>
             <li className="flex items-center gap-3">
-              <Lock className="size-4 text-primary" /> Доступ лише для авторизованих
+              <Lock className="size-4 text-primary" /> {t('login.feature3')}
             </li>
           </ul>
         </div>
 
         <p className="relative text-xs text-sidebar-foreground/50">
-          © {new Date().getFullYear()} Acme Corp · Confidential
+          {t('login.confidential', { year: new Date().getFullYear() })}
         </p>
       </div>
 
-      {/* Права панель — вхід */}
-      <div className="flex items-center justify-center p-6 sm:p-10">
-        <div className="w-full max-w-sm space-y-8">
-          {/* мобільний логотип */}
-          <div className="flex items-center gap-2.5 lg:hidden">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <FolderLock className="size-5" />
-            </div>
-            <span className="text-lg font-semibold tracking-tight">Acme Data Room</span>
-          </div>
+      {/* Права панель — вхід (на мобілці = весь екран, top-aligned) */}
+      <div className="flex flex-col px-6 py-6 sm:px-10">
+        {/* топ-рядок: лого (моб) + перемикач мови */}
+        <div className="flex items-center justify-between">
+          <div className="lg:invisible">{brand}</div>
+          <LanguageSwitch />
+        </div>
 
+        {/* моб-hero: коротка версія лівої панелі */}
+        <div className="mt-10 space-y-4 lg:hidden">
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight">
+            {t('login.heroTitle')}
+          </h1>
+          <ul className="space-y-2.5 text-sm text-muted-foreground">
+            <li className="flex items-center gap-3">
+              <ShieldCheck className="size-4 text-primary" /> {t('login.feature1')}
+            </li>
+            <li className="flex items-center gap-3">
+              <FileCheck2 className="size-4 text-primary" /> {t('login.feature2')}
+            </li>
+            <li className="flex items-center gap-3">
+              <Lock className="size-4 text-primary" /> {t('login.feature3')}
+            </li>
+          </ul>
+        </div>
+
+        {/* форма входу */}
+        <div className="mt-10 w-full max-w-sm space-y-8 lg:mx-auto lg:my-auto lg:mt-0">
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold tracking-tight">Вхід у сховище</h2>
-            <p className="text-sm text-muted-foreground">
-              Увійдіть, щоб отримати доступ до Data Room-ів.
-            </p>
+            <h2 className="text-2xl font-semibold tracking-tight">{t('login.title')}</h2>
+            <p className="text-sm text-muted-foreground">{t('login.subtitle')}</p>
           </div>
 
           <div className="space-y-4">
@@ -93,7 +109,7 @@ export function LoginPage() {
               <div className="flex justify-center">
                 <GoogleLogin
                   onSuccess={(r) => handleGoogle(r.credential)}
-                  onError={() => toast.error('Помилка входу через Google')}
+                  onError={() => toast.error(t('login.googleError'))}
                   theme="outline"
                   size="large"
                   width="320"
@@ -102,11 +118,7 @@ export function LoginPage() {
                 />
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-                Google-логін не налаштовано (немає{' '}
-                <code className="text-xs">VITE_GOOGLE_CLIENT_ID</code>). Скористайтесь
-                демо-входом нижче.
-              </div>
+              <GoogleButton label={t('login.google')} onClick={handleDemo} />
             )}
 
             <div className="relative">
@@ -114,21 +126,54 @@ export function LoginPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">або</span>
+                <span className="bg-background px-2 text-muted-foreground">
+                  {t('login.or')}
+                </span>
               </div>
             </div>
 
             <Button variant="outline" className="w-full" onClick={handleDemo}>
-              Продовжити в демо-режимі
+              {t('login.demo')}
             </Button>
           </div>
-
-          <p className="text-center text-xs text-muted-foreground">
-            Демо-режим створено на випадок, якщо Google-вхід недоступний у вашому
-            середовищі — щоб рецензент точно потрапив усередину.
-          </p>
         </div>
       </div>
     </div>
+  )
+}
+
+/** Стандартна Google-кнопка (fallback, коли Client ID не налаштовано). */
+function GoogleButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex h-11 w-full items-center justify-center gap-3 rounded-md border bg-background text-sm font-medium shadow-sm transition-colors hover:bg-accent active:scale-[0.99]"
+    >
+      <GoogleLogo />
+      {label}
+    </button>
+  )
+}
+
+function GoogleLogo() {
+  return (
+    <svg className="size-5" viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </svg>
   )
 }
