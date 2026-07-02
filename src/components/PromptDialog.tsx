@@ -26,6 +26,8 @@ export function PromptDialog({
   confirmText = 'Зберегти',
   type = 'text',
   minLength = 1,
+  hint,
+  validate,
   onSubmit,
 }: {
   open: boolean
@@ -38,23 +40,34 @@ export function PromptDialog({
   confirmText?: string
   type?: string
   minLength?: number
+  /** приглушена підказка під полем */
+  hint?: string
+  /** повертає текст помилки або null, якщо все ок */
+  validate?: (value: string) => string | null
   onSubmit: (value: string) => void | Promise<void>
 }) {
   const [value, setValue] = React.useState(initialValue)
   const [busy, setBusy] = React.useState(false)
+  const [touched, setTouched] = React.useState(false)
 
   // синхронізуємо початкове значення при кожному відкритті
   React.useEffect(() => {
-    if (open) setValue(initialValue)
+    if (open) {
+      setValue(initialValue)
+      setTouched(false)
+    }
   }, [open, initialValue])
+
+  const error = validate ? validate(value) : null
+  const canSubmit = value.trim().length >= minLength && !error
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    const trimmed = value.trim()
-    if (trimmed.length < minLength) return
+    setTouched(true)
+    if (!canSubmit) return
     setBusy(true)
     try {
-      await onSubmit(trimmed)
+      await onSubmit(value.trim())
       onOpenChange(false)
     } finally {
       setBusy(false)
@@ -77,7 +90,9 @@ export function PromptDialog({
               type={type}
               value={value}
               placeholder={placeholder}
+              aria-invalid={touched && !!error}
               onChange={(e) => setValue(e.target.value)}
+              onBlur={() => setTouched(true)}
               onFocus={(e) => {
                 if (type !== 'text') return
                 // при перейменуванні виділяємо ім'я без розширення
@@ -86,6 +101,11 @@ export function PromptDialog({
                 else e.target.select()
               }}
             />
+            {touched && error ? (
+              <p className="text-sm text-destructive">{error}</p>
+            ) : (
+              hint && <p className="text-xs text-muted-foreground">{hint}</p>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -96,7 +116,7 @@ export function PromptDialog({
             >
               Скасувати
             </Button>
-            <Button type="submit" disabled={busy || value.trim().length < minLength}>
+            <Button type="submit" disabled={busy || !canSubmit}>
               {confirmText}
             </Button>
           </DialogFooter>

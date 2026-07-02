@@ -132,6 +132,10 @@ export function getSessionKey(roomId: string): CryptoKey | undefined {
 export function clearSessionKey(roomId: string) {
   sessionKeys.delete(roomId)
 }
+/** Скидає всі розблоковані ключі (напр. при виході з акаунта). */
+export function clearAllSessionKeys() {
+  sessionKeys.clear()
+}
 export function isUnlocked(roomId: string): boolean {
   return sessionKeys.has(roomId)
 }

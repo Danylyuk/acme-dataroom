@@ -219,7 +219,12 @@ export async function lockDataroom(roomId: string, passphrase: string): Promise<
   }
 
   await db.datarooms.update(roomId, { encrypted: true, crypto: params, updatedAt: now() })
-  vault.setSessionKey(roomId, dek)
+  // НЕ тримаємо ключ після шифрування: сейф одразу замкнено, треба ввести пароль.
+}
+
+/** Скидає всі розблоковані сесійні ключі (виклик на виході з акаунта). */
+export function lockAllSessions() {
+  vault.clearAllSessionKeys()
 }
 
 /** Розблоковує сейф на час сесії. Повертає false при невірному паролі. */

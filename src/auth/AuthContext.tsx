@@ -9,8 +9,10 @@ export interface User {
   name: string
   email: string
   picture?: string
-  /** 'google' — увійшов через Google; 'demo' — резервний вхід (fallback). */
-  provider: 'google' | 'demo'
+  /** як увійшов: email+пароль, Google, або демо. */
+  provider: 'email' | 'google' | 'demo'
+  /** JWT з бекенду (для email-логіну). */
+  token?: string
 }
 
 interface AuthContextValue {
@@ -41,6 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = React.useCallback(() => {
     setUser(null)
     localStorage.removeItem(STORAGE_KEY)
+    // скидаємо всі розблоковані ключі шифрування — після виходу питати пароль знову
+    void import('@/db/api').then((m) => m.lockAllSessions())
   }, [])
 
   const updateProfile = React.useCallback((patch: Partial<Pick<User, 'name'>>) => {

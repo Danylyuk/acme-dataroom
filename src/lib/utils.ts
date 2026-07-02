@@ -6,6 +6,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Пароль достатньо сильний: ≥6 символів, ≥1 велика літера, ≥1 цифра. */
+export function isStrongPassword(pw: string): boolean {
+  return pw.length >= 6 && /[A-ZА-ЯЄІЇҐ]/.test(pw) && /\d/.test(pw)
+}
+
 /** Людський розмір файлу: 1024 → "1 KB". */
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'

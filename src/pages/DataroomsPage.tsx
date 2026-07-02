@@ -32,11 +32,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import { PromptDialog } from '@/components/PromptDialog'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EmptyState } from '@/components/EmptyState'
 import { useI18n } from '@/i18n/LanguageContext'
-import { formatRelativeTime } from '@/lib/utils'
+import { formatRelativeTime, isStrongPassword } from '@/lib/utils'
 
 export function DataroomsPage() {
   const { t } = useI18n()
@@ -65,6 +72,11 @@ export function DataroomsPage() {
           <FolderPlus /> {t('rooms.new')}
         </Button>
       </header>
+
+      <div className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+        <p>{t('lock.homeNote')}</p>
+      </div>
 
       {isLoading ? (
         <SkeletonGrid />
@@ -149,6 +161,8 @@ export function DataroomsPage() {
         label={t('lock.passLabel')}
         type="password"
         minLength={6}
+        hint={t('lock.passHint')}
+        validate={(v) => (isStrongPassword(v) ? null : t('lock.passWeak'))}
         placeholder="••••••••"
         confirmText={t('lock.encrypt')}
         onSubmit={async (pass) => {
@@ -203,7 +217,18 @@ function DataroomCard({
   const { t, plural, locale } = useI18n()
   const { data: fileCount } = useFileCount(room.id)
 
+  // спільні дії — рендеряться і в ⋮-меню, і в ПКМ-меню
+  const actions = [
+    { key: 'rename', icon: <Pencil />, label: t('node.rename'), run: onRename },
+    room.encrypted
+      ? { key: 'lock', icon: <ShieldOff />, label: t('lock.remove'), run: onRemoveLock }
+      : { key: 'lock', icon: <ShieldCheck />, label: t('lock.protect'), run: onLock },
+    { key: 'delete', icon: <Trash2 />, label: t('node.delete'), run: onDelete, destructive: true, sep: true },
+  ]
+
   return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
     <Card className="group relative overflow-hidden transition-all hover:border-primary/40 hover:shadow-md">
       <Link
         to="/r/$roomId"
@@ -215,7 +240,7 @@ function DataroomCard({
             <FolderLock className="size-5.5" />
           </div>
           {room.encrypted && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-600">
+            <span className="mr-7 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-600">
               <Lock className="size-3" /> {t('lock.badge')}
             </span>
           )}
@@ -247,26 +272,36 @@ function DataroomCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={onRename}>
-              <Pencil /> {t('node.rename')}
-            </DropdownMenuItem>
-            {room.encrypted ? (
-              <DropdownMenuItem onSelect={onRemoveLock}>
-                <ShieldOff /> {t('lock.remove')}
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onSelect={onLock}>
-                <ShieldCheck /> {t('lock.protect')}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-              <Trash2 /> {t('node.delete')}
-            </DropdownMenuItem>
+            {actions.map((a) => (
+              <React.Fragment key={a.key}>
+                {a.sep && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  variant={a.destructive ? 'destructive' : 'default'}
+                  onSelect={a.run}
+                >
+                  {a.icon} {a.label}
+                </DropdownMenuItem>
+              </React.Fragment>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </Card>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {actions.map((a) => (
+          <React.Fragment key={a.key}>
+            {a.sep && <ContextMenuSeparator />}
+            <ContextMenuItem
+              variant={a.destructive ? 'destructive' : 'default'}
+              onSelect={a.run}
+            >
+              {a.icon} {a.label}
+            </ContextMenuItem>
+          </React.Fragment>
+        ))}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
