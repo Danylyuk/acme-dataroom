@@ -36,15 +36,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   })
 
   const signIn = React.useCallback((u: User) => {
-    setUser(u)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u))
+    // Reload на корінь: db.ts переініціалізує IndexedDB під e-mail цього юзера,
+    // а React Query стартує з чистого кешу — жодних чужих даних між акаунтами.
+    window.location.assign('/')
   }, [])
 
   const signOut = React.useCallback(() => {
-    setUser(null)
     localStorage.removeItem(STORAGE_KEY)
-    // скидаємо всі розблоковані ключі шифрування — після виходу питати пароль знову
-    void import('@/db/api').then((m) => m.lockAllSessions())
+    // reload гарантує скидання розблокованих ключів шифрування і кешу запитів
+    window.location.assign('/')
   }, [])
 
   const updateProfile = React.useCallback((patch: Partial<Pick<User, 'name'>>) => {
