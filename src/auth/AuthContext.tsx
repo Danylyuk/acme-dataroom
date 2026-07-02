@@ -17,6 +17,7 @@ interface AuthContextValue {
   user: User | null
   signIn: (user: User) => void
   signOut: () => void
+  updateProfile: (patch: Partial<Pick<User, 'name'>>) => void
 }
 
 const STORAGE_KEY = 'acme_dataroom_user'
@@ -42,7 +43,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(STORAGE_KEY)
   }, [])
 
-  const value = React.useMemo(() => ({ user, signIn, signOut }), [user, signIn, signOut])
+  const updateProfile = React.useCallback((patch: Partial<Pick<User, 'name'>>) => {
+    setUser((prev) => {
+      if (!prev) return prev
+      const next = { ...prev, ...patch }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const value = React.useMemo(
+    () => ({ user, signIn, signOut, updateProfile }),
+    [user, signIn, signOut, updateProfile],
+  )
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

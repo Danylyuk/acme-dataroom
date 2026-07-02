@@ -8,7 +8,13 @@ const OPTIONS: { code: Lang; label: string }[] = [
 ]
 
 /** Сегментований перемикач мови. variant='dark' — для графітового сайдбару. */
-export function LanguageSwitch({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
+export function LanguageSwitch({
+  variant = 'light',
+  className,
+}: {
+  variant?: 'light' | 'dark'
+  className?: string
+}) {
   const { lang, setLang } = useI18n()
   const dark = variant === 'dark'
   return (
@@ -16,6 +22,7 @@ export function LanguageSwitch({ variant = 'light' }: { variant?: 'light' | 'dar
       className={cn(
         'inline-flex items-center rounded-lg p-0.5 text-xs font-medium',
         dark ? 'bg-sidebar-accent/60' : 'border bg-secondary',
+        className,
       )}
     >
       {OPTIONS.map((o) => (

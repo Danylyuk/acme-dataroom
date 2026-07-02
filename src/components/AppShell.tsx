@@ -1,9 +1,11 @@
 import * as React from 'react'
 import { Link } from '@tanstack/react-router'
-import { FolderLock, LayoutGrid, LogOut } from 'lucide-react'
+import { toast } from 'sonner'
+import { FolderLock, LayoutGrid, LogOut, Pencil } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { useI18n } from '@/i18n/LanguageContext'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
+import { PromptDialog } from '@/components/PromptDialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -75,8 +77,9 @@ function SidebarLink({
 }
 
 function UserMenu() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, updateProfile } = useAuth()
   const { t } = useI18n()
+  const [renameOpen, setRenameOpen] = React.useState(false)
   if (!user) return null
   const initials = user.name
     .split(' ')
@@ -86,30 +89,51 @@ function UserMenu() {
     .toUpperCase()
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-lg p-1.5 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring md:mt-auto md:w-full">
-        <Avatar>
-          {user.picture && <AvatarImage src={user.picture} alt={user.name} />}
-          <AvatarFallback>{initials}</AvatarFallback>
-        </Avatar>
-        <div className="hidden min-w-0 md:block">
-          <div className="truncate text-sm font-medium">{user.name}</div>
-          <div className="truncate text-xs text-sidebar-foreground/50">{user.email}</div>
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel>{user.email || t('shell.demoAccount')}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {/* перемикач мови — доступний у меню (важливо для мобілки) */}
-        <div className="flex items-center justify-between px-2.5 py-1.5">
-          <span className="text-sm text-muted-foreground">{t('shell.language')}</span>
-          <LanguageSwitch />
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={signOut}>
-          <LogOut /> {t('shell.signOut')}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger className="flex items-center gap-2.5 rounded-lg p-1.5 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring md:mt-auto md:w-full">
+          <Avatar>
+            {user.picture && <AvatarImage src={user.picture} alt={user.name} />}
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+          <div className="hidden min-w-0 md:block">
+            <div className="truncate text-sm font-medium">{user.name}</div>
+            <div className="truncate text-xs text-sidebar-foreground/50">{user.email}</div>
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-60">
+          <DropdownMenuLabel className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium text-popover-foreground">{user.name}</span>
+            <span className="truncate font-normal">{user.email || t('shell.demoAccount')}</span>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
+            <Pencil /> {t('shell.rename')}
+          </DropdownMenuItem>
+          {/* перемикач мови в меню — ТІЛЬКИ мобілка (на десктопі він у сайдбарі) */}
+          <div className="flex items-center justify-between px-2.5 py-1.5 md:hidden">
+            <span className="text-sm text-muted-foreground">{t('shell.language')}</span>
+            <LanguageSwitch />
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onSelect={signOut}>
+            <LogOut /> {t('shell.signOut')}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <PromptDialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        title={t('shell.renameTitle')}
+        label={t('shell.nameLabel')}
+        initialValue={user.name}
+        confirmText={t('common.save')}
+        onSubmit={(name) => {
+          updateProfile({ name })
+          toast.success(t('shell.nameUpdated'))
+        }}
+      />
+    </>
   )
 }
