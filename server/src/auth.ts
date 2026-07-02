@@ -94,7 +94,12 @@ authRouter.post('/register', async (req, res) => {
     })
   }
 
-  await sendVerificationCode(email, code)
+  try {
+    await sendVerificationCode(email, code)
+  } catch (e) {
+    console.error('[register] email send failed:', e instanceof Error ? e.message : e)
+    return res.status(502).json({ error: 'email_send_failed' })
+  }
   res.json({ ok: true, next: 'verify' })
 })
 
