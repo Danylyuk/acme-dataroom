@@ -14,7 +14,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import type { TreeNode } from '@/db/types'
-import { getFileBlob, countSubtree } from '@/db/api'
+import { getFileBlob, countSubtree, unlockDataroom, isUnlocked } from '@/db/api'
 import {
   useDataroom,
   useChildren,
@@ -35,6 +35,7 @@ import { NodeTile } from './NodeTile'
 import { PdfViewerDialog } from './PdfViewerDialog'
 import { MoveDialog } from './MoveDialog'
 import { PropertiesDialog } from './PropertiesDialog'
+import { UnlockScreen } from './UnlockScreen'
 import { cn } from '@/lib/utils'
 
 export function DataroomPage() {
@@ -63,7 +64,10 @@ export function DataroomPage() {
   const [viewing, setViewing] = React.useState<TreeNode | null>(null)
   const [moving, setMoving] = React.useState<TreeNode | null>(null)
   const [propsNode, setPropsNode] = React.useState<TreeNode | null>(null)
+  const [unlocked, setUnlocked] = React.useState(() => isUnlocked(roomId))
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  React.useEffect(() => setUnlocked(isUnlocked(roomId)), [roomId])
 
   function goToFolder(id: string | null) {
     navigate({ to: '/r/$roomId', params: { roomId }, search: { folder: id ?? undefined } })
@@ -141,6 +145,20 @@ export function DataroomPage() {
     const q = query.toLowerCase()
     return children.filter((n) => n.name.toLowerCase().includes(q))
   }, [children, query])
+
+  // Зашифрований сейф і ще не розблокований у цій сесії → екран пароля
+  if (room?.encrypted && !unlocked) {
+    return (
+      <UnlockScreen
+        roomName={room.name}
+        onUnlock={async (pass) => {
+          const ok = await unlockDataroom(roomId, pass)
+          if (ok) setUnlocked(true)
+          return ok
+        }}
+      />
+    )
+  }
 
   return (
     <div className="flex min-h-svh flex-col" {...getRootProps()}>

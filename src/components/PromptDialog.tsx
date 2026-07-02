@@ -24,6 +24,8 @@ export function PromptDialog({
   placeholder,
   initialValue = '',
   confirmText = 'Зберегти',
+  type = 'text',
+  minLength = 1,
   onSubmit,
 }: {
   open: boolean
@@ -34,6 +36,8 @@ export function PromptDialog({
   placeholder?: string
   initialValue?: string
   confirmText?: string
+  type?: string
+  minLength?: number
   onSubmit: (value: string) => void | Promise<void>
 }) {
   const [value, setValue] = React.useState(initialValue)
@@ -47,7 +51,7 @@ export function PromptDialog({
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = value.trim()
-    if (!trimmed) return
+    if (trimmed.length < minLength) return
     setBusy(true)
     try {
       await onSubmit(trimmed)
@@ -70,10 +74,12 @@ export function PromptDialog({
             <Input
               id="prompt-input"
               autoFocus
+              type={type}
               value={value}
               placeholder={placeholder}
               onChange={(e) => setValue(e.target.value)}
               onFocus={(e) => {
+                if (type !== 'text') return
                 // при перейменуванні виділяємо ім'я без розширення
                 const dot = e.target.value.lastIndexOf('.')
                 if (dot > 0) e.target.setSelectionRange(0, dot)
@@ -90,7 +96,7 @@ export function PromptDialog({
             >
               Скасувати
             </Button>
-            <Button type="submit" disabled={busy || !value.trim()}>
+            <Button type="submit" disabled={busy || value.trim().length < minLength}>
               {confirmText}
             </Button>
           </DialogFooter>

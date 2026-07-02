@@ -70,6 +70,30 @@ export function useDeleteDataroom() {
   })
 }
 
+// ─────────────── Шифрування (замок) ───────────────
+
+export function useLockDataroom(roomId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (passphrase: string) => api.lockDataroom(roomId, passphrase),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.datarooms })
+      qc.invalidateQueries({ queryKey: qk.dataroom(roomId) })
+    },
+  })
+}
+
+export function useRemoveLock(roomId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.removeLock(roomId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.datarooms })
+      qc.invalidateQueries({ queryKey: qk.dataroom(roomId) })
+    },
+  })
+}
+
 // ─────────────── Nodes ───────────────
 
 export function useChildren(roomId: string, parentId: string | null) {

@@ -8,15 +8,21 @@ import {
   Pencil,
   Trash2,
   FileText,
+  Lock,
+  ShieldCheck,
+  ShieldOff,
 } from 'lucide-react'
 import type { Dataroom } from '@/db/types'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   useDatarooms,
   useCreateDataroom,
   useRenameDataroom,
   useDeleteDataroom,
   useFileCount,
+  qk,
 } from '@/hooks/queries'
+import { lockDataroom, removeLock, unlockDataroom } from '@/db/api'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -39,9 +45,12 @@ export function DataroomsPage() {
   const renameRoom = useRenameDataroom()
   const deleteRoom = useDeleteDataroom()
 
+  const qc = useQueryClient()
   const [createOpen, setCreateOpen] = React.useState(false)
   const [renaming, setRenaming] = React.useState<Dataroom | null>(null)
   const [deleting, setDeleting] = React.useState<Dataroom | null>(null)
+  const [locking, setLocking] = React.useState<Dataroom | null>(null)
+  const [unlockingRemove, setUnlockingRemove] = React.useState<Dataroom | null>(null)
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
@@ -78,6 +87,8 @@ export function DataroomsPage() {
               room={room}
               onRename={() => setRenaming(room)}
               onDelete={() => setDeleting(room)}
+              onLock={() => setLocking(room)}
+              onRemoveLock={() => setUnlockingRemove(room)}
             />
           ))}
         </div>
@@ -128,6 +139,50 @@ export function DataroomsPage() {
           }
         }}
       />
+
+      {/* Захистити паролем (шифрування) */}
+      <PromptDialog
+        open={!!locking}
+        onOpenChange={(o) => !o && setLocking(null)}
+        title={t('lock.setTitle', { name: locking?.name ?? '' })}
+        description={t('lock.setDesc')}
+        label={t('lock.passLabel')}
+        type="password"
+        minLength={6}
+        placeholder="••••••••"
+        confirmText={t('lock.encrypt')}
+        onSubmit={async (pass) => {
+          if (!locking) return
+          await lockDataroom(locking.id, pass)
+          qc.invalidateQueries({ queryKey: qk.datarooms })
+          qc.invalidateQueries({ queryKey: qk.dataroom(locking.id) })
+          toast.success(t('lock.locked'))
+        }}
+      />
+
+      {/* Зняти захист (пароль підтверджує) */}
+      <PromptDialog
+        open={!!unlockingRemove}
+        onOpenChange={(o) => !o && setUnlockingRemove(null)}
+        title={t('lock.removeTitle', { name: unlockingRemove?.name ?? '' })}
+        description={t('lock.removeDesc')}
+        label={t('lock.passLabel')}
+        type="password"
+        placeholder="••••••••"
+        confirmText={t('lock.remove')}
+        onSubmit={async (pass) => {
+          if (!unlockingRemove) return
+          const ok = await unlockDataroom(unlockingRemove.id, pass)
+          if (!ok) {
+            toast.error(t('lock.wrongPass'))
+            return
+          }
+          await removeLock(unlockingRemove.id)
+          qc.invalidateQueries({ queryKey: qk.datarooms })
+          qc.invalidateQueries({ queryKey: qk.dataroom(unlockingRemove.id) })
+          toast.success(t('lock.removed'))
+        }}
+      />
     </div>
   )
 }
@@ -136,10 +191,14 @@ function DataroomCard({
   room,
   onRename,
   onDelete,
+  onLock,
+  onRemoveLock,
 }: {
   room: Dataroom
   onRename: () => void
   onDelete: () => void
+  onLock: () => void
+  onRemoveLock: () => void
 }) {
   const { t, plural, locale } = useI18n()
   const { data: fileCount } = useFileCount(room.id)
@@ -155,6 +214,11 @@ function DataroomCard({
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
             <FolderLock className="size-5.5" />
           </div>
+          {room.encrypted && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-600">
+              <Lock className="size-3" /> {t('lock.badge')}
+            </span>
+          )}
         </div>
         <h3 className="truncate pr-8 font-semibold" title={room.name}>
           {room.name}
@@ -184,11 +248,20 @@ function DataroomCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={onRename}>
-              <Pencil /> Перейменувати
+              <Pencil /> {t('node.rename')}
             </DropdownMenuItem>
+            {room.encrypted ? (
+              <DropdownMenuItem onSelect={onRemoveLock}>
+                <ShieldOff /> {t('lock.remove')}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onSelect={onLock}>
+                <ShieldCheck /> {t('lock.protect')}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-              <Trash2 /> Видалити
+              <Trash2 /> {t('node.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

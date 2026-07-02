@@ -1,5 +1,6 @@
 import { db } from './db'
 import type { Dataroom, TreeNode } from './types'
+import * as vault from './crypto'
 
 /**
  * "API-шар". Усі операції зібрані тут як асинхронні функції — так, ніби це
@@ -162,17 +163,107 @@ export async function uploadFile(
     mime: file.type || 'application/pdf',
     blobKey: id,
   }
+
+  // Якщо сейф зашифрований — шифруємо байти перед записом (потрібен розблокований DEK).
+  const room = await db.datarooms.get(dataroomId)
+  let blobRec: { key: string; data: Blob; iv?: number[] } = { key: id, data: file }
+  if (room?.encrypted) {
+    const dek = vault.getSessionKey(dataroomId)
+    if (!dek) throw new Error('Data Room заблоковано')
+    const { iv, cipher } = await vault.encryptBytes(dek, await file.arrayBuffer())
+    blobRec = { key: id, data: new Blob([cipher]), iv }
+  }
+
   await db.transaction('rw', db.nodes, db.blobs, async () => {
-    await db.blobs.add({ key: id, data: file })
+    await db.blobs.add(blobRec)
     await db.nodes.add(node)
   })
   return node
 }
 
-/** Повертає Blob файлу (для перегляду / завантаження). */
+/** Повертає Blob файлу (для перегляду / завантаження); прозоро розшифровує. */
 export async function getFileBlob(nodeId: string): Promise<Blob | undefined> {
   const rec = await db.blobs.get(nodeId)
-  return rec?.data
+  if (!rec) return undefined
+  if (!rec.iv) return rec.data
+  // зашифрований — потрібен розблокований DEK сейфу
+  const node = await db.nodes.get(nodeId)
+  const dek = node && vault.getSessionKey(node.dataroomId)
+  if (!dek) throw new Error('Data Room заблоковано')
+  const plain = await vault.decryptBytes(dek, rec.iv, await rec.data.arrayBuffer())
+  return new Blob([plain], { type: node?.mime || 'application/pdf' })
+}
+
+// ─────────────────────────── Шифрування (замок на Data Room) ───────────────────────────
+
+export const isUnlocked = vault.isUnlocked
+
+/** Ставить пароль на сейф: генерує ключ, шифрує всі наявні файли. */
+export async function lockDataroom(roomId: string, passphrase: string): Promise<void> {
+  const room = await db.datarooms.get(roomId)
+  if (!room) throw new Error('Data Room не знайдено')
+  if (room.encrypted) throw new Error('Вже зашифровано')
+  const { params, dek } = await vault.createCrypto(passphrase)
+
+  // шифруємо всі наявні блоби сейфу
+  const fileNodes = await db.nodes
+    .where('dataroomId')
+    .equals(roomId)
+    .filter((n) => n.type === 'file' && !!n.blobKey)
+    .toArray()
+  for (const n of fileNodes) {
+    const rec = await db.blobs.get(n.blobKey!)
+    if (!rec || rec.iv) continue
+    const { iv, cipher } = await vault.encryptBytes(dek, await rec.data.arrayBuffer())
+    await db.blobs.put({ key: rec.key, data: new Blob([cipher]), iv })
+  }
+
+  await db.datarooms.update(roomId, { encrypted: true, crypto: params, updatedAt: now() })
+  vault.setSessionKey(roomId, dek)
+}
+
+/** Розблоковує сейф на час сесії. Повертає false при невірному паролі. */
+export async function unlockDataroom(roomId: string, passphrase: string): Promise<boolean> {
+  const room = await db.datarooms.get(roomId)
+  if (!room?.crypto) return true // не зашифрований
+  try {
+    const dek = await vault.unwrapDek(passphrase, room.crypto)
+    vault.setSessionKey(roomId, dek)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Знімає захист: розшифровує всі файли назад у plaintext (потрібен розблокований сейф). */
+export async function removeLock(roomId: string): Promise<void> {
+  const room = await db.datarooms.get(roomId)
+  if (!room?.encrypted) return
+  const dek = vault.getSessionKey(roomId)
+  if (!dek) throw new Error('Спершу розблокуйте Data Room')
+
+  const fileNodes = await db.nodes
+    .where('dataroomId')
+    .equals(roomId)
+    .filter((n) => n.type === 'file' && !!n.blobKey)
+    .toArray()
+  for (const n of fileNodes) {
+    const rec = await db.blobs.get(n.blobKey!)
+    if (!rec || !rec.iv) continue
+    const plain = await vault.decryptBytes(dek, rec.iv, await rec.data.arrayBuffer())
+    await db.blobs.put({ key: rec.key, data: new Blob([plain], { type: n.mime }) })
+  }
+
+  await db.datarooms.update(roomId, {
+    encrypted: false,
+    crypto: undefined,
+    updatedAt: now(),
+  })
+  vault.clearSessionKey(roomId)
+}
+
+export function lockSession(roomId: string) {
+  vault.clearSessionKey(roomId)
 }
 
 // ─────────────────────────── Спільне: rename / delete / move ───────────────────────────

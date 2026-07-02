@@ -13,6 +13,10 @@ export interface Dataroom {
   name: string
   createdAt: number
   updatedAt: number
+  /** true → вміст зашифровано паролем (AES-256-GCM at-rest) */
+  encrypted?: boolean
+  /** криптопараметри (salt, wrappedDEK…); присутні коли encrypted */
+  crypto?: import('./crypto').DataroomCrypto
 }
 
 /** Вузол дерева — папка або файл. */
@@ -41,5 +45,8 @@ export interface TreeNode {
 /** Сам бінарник PDF, зберігається окремо від метаданих. */
 export interface FileBlob {
   key: string
+  /** plaintext-Blob, або шифротекст коли iv присутній */
   data: Blob
+  /** IV шифрування; присутній → data зашифровано DEK-ом сейфу */
+  iv?: number[]
 }
