@@ -115,6 +115,12 @@ export function AuthPanel() {
     toast.success(t('login.welcome', { name: (p.name ?? 'User').split(' ')[0] }))
   }
 
+  // Локальний fallback, коли Google Client ID не налаштовано (dev). На проді — справжній вхід.
+  function handleGoogleFallback() {
+    signIn({ name: 'Google User', email: 'user@gmail.com', provider: 'google' })
+    toast.success(t('login.welcome', { name: 'Google' }))
+  }
+
   // ── Крок верифікації коду ──
   if (pendingEmail) {
     return (
@@ -173,28 +179,29 @@ export function AuthPanel() {
         <p className="text-sm text-muted-foreground">{t('login.subtitle')}</p>
       </div>
 
-      {GOOGLE_CLIENT_ID && (
-        <>
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={(r) => handleGoogle(r.credential)}
-              onError={() => toast.error(t('login.googleError'))}
-              theme="outline"
-              size="large"
-              width="320"
-              text="signin_with"
-            />
-          </div>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">{t('login.or')}</span>
-            </div>
-          </div>
-        </>
-      )}
+      {/* Google-вхід: справжній за наявності Client ID, інакше — стандартна кнопка (dev-fallback) */}
+      <div className="flex justify-center">
+        {GOOGLE_CLIENT_ID ? (
+          <GoogleLogin
+            onSuccess={(r) => handleGoogle(r.credential)}
+            onError={() => toast.error(t('login.googleError'))}
+            theme="outline"
+            size="large"
+            width="320"
+            text="signin_with"
+          />
+        ) : (
+          <GoogleButton label={t('login.google')} onClick={handleGoogleFallback} />
+        )}
+      </div>
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">{t('login.or')}</span>
+        </div>
+      </div>
 
       {/* Таби */}
       <div className="flex rounded-lg border bg-secondary p-1 text-sm font-medium">
@@ -270,6 +277,31 @@ export function AuthPanel() {
         </Button>
       </form>
     </div>
+  )
+}
+
+/** Стандартна Google-кнопка (fallback, коли Client ID не налаштовано). */
+function GoogleButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-11 w-[320px] max-w-full items-center justify-center gap-3 rounded-md border bg-background text-sm font-medium shadow-sm transition-colors hover:bg-accent active:scale-[0.99]"
+    >
+      <GoogleLogo />
+      {label}
+    </button>
+  )
+}
+
+function GoogleLogo() {
+  return (
+    <svg className="size-5" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
   )
 }
 
