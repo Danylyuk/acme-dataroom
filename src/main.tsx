@@ -8,7 +8,10 @@ import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/auth/AuthContext'
 import { LanguageProvider } from '@/i18n/LanguageContext'
 import { router } from '@/router'
+import { installNoZoom } from '@/lib/noZoom'
 import './index.css'
+
+installNoZoom()
 
 const queryClient = new QueryClient({
   defaultOptions: {
