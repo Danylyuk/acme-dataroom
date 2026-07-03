@@ -143,9 +143,11 @@ export const translations = {
     // node menu
     'node.preview': 'Переглянути',
     'node.download': 'Завантажити',
+    'node.open': 'Відкрити',
     'node.rename': 'Перейменувати',
     'node.move': 'Перемістити',
     'node.properties': 'Властивості',
+    'pdf.mobileHint': 'На телефоні PDF зручніше дивитися на повний екран',
     'node.delete': 'Видалити',
     'node.folder': 'Папка',
     'node.file': 'PDF',
@@ -324,9 +326,11 @@ export const translations = {
 
     'node.preview': 'Preview',
     'node.download': 'Download',
+    'node.open': 'Open',
     'node.rename': 'Rename',
     'node.move': 'Move',
     'node.properties': 'Properties',
+    'pdf.mobileHint': 'On mobile, PDFs are easier to view full-screen',
     'node.delete': 'Delete',
     'node.folder': 'Folder',
     'node.file': 'PDF',

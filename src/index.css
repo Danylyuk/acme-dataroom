@@ -139,10 +139,17 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+    /* без горизонтального «гумового» скролу на мобільних */
+    overflow-x: hidden;
   }
   body {
     margin: 0;
     min-height: 100svh;
+    max-width: 100%;
+    overflow-x: hidden;
+    /* прибирає double-tap zoom і 300ms-затримку тапа */
+    touch-action: manipulation;
+    overscroll-behavior-y: none;
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);

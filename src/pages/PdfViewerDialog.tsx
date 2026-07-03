@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Download, Loader2 } from 'lucide-react'
+import { Download, ExternalLink, FileText, Loader2 } from 'lucide-react'
 import type { TreeNode } from '@/db/types'
 import { getFileBlob } from '@/db/api'
 import {
@@ -56,6 +56,10 @@ export function PdfViewerDialog({
     }
   }
 
+  function openFullscreen() {
+    if (url) window.open(url, '_blank', 'noopener')
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[90svh] max-w-4xl flex-col gap-0 p-0 sm:w-[calc(100%-4rem)]">
@@ -80,11 +84,30 @@ export function PdfViewerDialog({
             </div>
           )}
           {url && (
-            <iframe
-              src={url}
-              title={node?.name}
-              className="size-full border-0"
-            />
+            <>
+              {/* Десктоп — вбудований перегляд */}
+              <iframe
+                src={url}
+                title={node?.name}
+                className="hidden size-full border-0 md:block"
+              />
+              {/* Мобілка — нативний iframe не масштабує PDF під ширину,
+                  тож даємо повноекранний перегляд / завантаження */}
+              <div className="flex size-full flex-col items-center justify-center gap-5 p-8 text-center md:hidden">
+                <FileText className="size-14 text-muted-foreground" />
+                <p className="max-w-xs text-sm text-muted-foreground">
+                  {t('pdf.mobileHint')}
+                </p>
+                <div className="flex gap-2">
+                  <Button onClick={openFullscreen}>
+                    <ExternalLink /> {t('node.open')}
+                  </Button>
+                  <Button variant="outline" onClick={download}>
+                    <Download /> {t('node.download')}
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </DialogContent>
