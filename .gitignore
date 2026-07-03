@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Env (реальні секрети; .env.example лишається у репо)
+.env
+.env.*
+!.env.example
+
 # Local server datastore
 server/data.json
 server/data.json.tmp
